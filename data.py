@@ -4,6 +4,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn import metrics
 from datetime import datetime
+import matplotlib.pyplot as plt
+import statsmodels.formula.api as sm
 import numpy as np
 import pandas as pd
 
@@ -56,21 +58,6 @@ X = X.reindex(columns = column_titles)
 X = X.dropna()
 Y = Y.dropna()[26:]
 
-# Is there a cross?
-diff_list = [[round(X['p_sma50'][i] - X['p_sma20'][i], 3), round(X['sma50'][i] - X['sma20'][i], 3)] for i in range(len(X))]
-def get_cross(sma_diff_list):
-	for i in range(len(sma_diff_list)):
-		if sma_diff_list[i][0] >= 0 and sma_diff_list[i][1] >= 0 or sma_diff_list[i][0] < 0 and sma_diff_list[i][1] < 0:  # No cross
-			sma_diff_list[i] = 0
-		elif sma_diff_list[i][0] >= 0 and sma_diff_list[i][1] < 0: # Bullish cross
-			sma_diff_list[i] = 1
-		elif sma_diff_list[i][0] < 0 and sma_diff_list[i][1] >= 0: # Bearish cross
-			sma_diff_list[i] = -1
-
-	return sma_diff_list
-
-# We add the cross column to our vector X
-X = X.assign(cross = get_cross(diff_list))
 
 # Dividing dataset into training and testing
 X_train, X_test, Y_train, Y_test = train_test_split(X.values, Y.values, test_size = 0.2, shuffle = False)
@@ -81,8 +68,8 @@ sc = StandardScaler()
 X_train = sc.fit_transform(X_train)
 X_test  = sc.transform(X_test)
 
-# Y_train = sc.fit_transform(Y_train)
-# Y_test  = sc.transform(Y_test)
+Y_train = sc.fit_transform(Y_train)
+Y_test  = sc.transform(Y_test)
 
 # Applying a linear regression
 regression = LinearRegression()
@@ -90,7 +77,27 @@ regression.fit(X_train, Y_train)
 
 Y_pred = regression.predict(X_test)
 
-print(np.sqrt(metrics.mean_squared_error(Y_test, Y_pred)))
+# Optimising the model
+# X = np.append(arr = X, values = np.ones((4949, 1)))
+
+# Performance metrics
+n = len(X.values)
+p = len(X.values[0])
+
+rmse   = np.sqrt(metrics.mean_squared_error(Y_pred, Y_test))
+r2     = metrics.r2_score(Y_test, Y_pred)
+adj_r2 = 1-(1 - r2)*(n-1)/(n-p-1)
+
+# Visualising Y_test vs Y_pred
+price_1_test = [Y_test[i][0] for i in range(len(Y_test))]
+price_1_pred = [Y_pred[i][0] for i in range(len(Y_pred))]
+
+t = list(range(len(Y_test)))
+
+plt.plot(t, price_1_test, 'g')
+plt.plot(t, price_1_pred, 'r')
+plt.show()
+
 
 
 
